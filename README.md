@@ -10,7 +10,3 @@ We used the statistical software [R](https://cran.r-project.org/) along with pac
 
 Not unlike a `facet_wrap` in `ggplot`, `gganimate` adds a time dimension to the figure.
 
-Check out the self-contained R script "car_registrations.R" on my github page https://github.com/mayer79/race-chart to re-create the resulting movie. Among the options are an animated gif or this mp4 movie. The latter requires admin rights to install the mp4 renderer.
-
-
-
