@@ -22,7 +22,7 @@ get_sheet <- function(sheet, year) {
 # Step 2: Apply it to each year and month for 2017, 2018 and 2019
 raw <- list(`2017` = lapply(1:12, get_sheet, 2017),
             `2018` = lapply(1:12, get_sheet, 2018),
-            `2019` = lapply(1:6, get_sheet, 2019))
+            `2019` = lapply(1:12, get_sheet, 2019))
 
 # saveRDS(raw, "raw.rds")
 
@@ -35,7 +35,9 @@ raw <- list(`2017` = lapply(1:12, get_sheet, 2017),
 # Step 1: turn nested list into data frame; clean up data
 prep1 <- raw %>%                                            
   lapply(bind_rows, .id = "month") %>%                      # bind sheets within year
-  bind_rows(.id = "year") %>%                               # bind years
+  bind_rows(.id = "year") %>% # # bind years
+  bind_rows(data.frame(year = c("2018", "2019"), month = "1", 
+                       Marke = "Tesla", Modell = "Model 3", Anzahl = 0)) %>% 
   mutate(year_month = make_date(year, month, 1),            # combine year and month and format it
          ym_formatted = format(year_month, "%b %Y"),
          ym_formatted = fct_reorder(ym_formatted, year_month)) %>%              
@@ -46,13 +48,13 @@ prep1 <- raw %>%
          model = gsub("'", "", model),
          brand_model = paste(brand, model))                 # combine brand and model
 
-# Step 2: Counts are with respect to each January but we want total cumulative counts
+# Step 2: Counts are with respect to each January but we want sliding sums counts
 prep2 <- prep1 %>% 
   arrange(year_month) %>%                                   # sort in year_month
   group_by(year, brand_model) %>%                           # differentiate wrt to each Jan
   mutate(N = ifelse(month == "1", N, N - lag(N))) %>% 
   group_by(brand_model) %>% 
-  mutate(N_cum = cumsum(N)) %>% 
+  mutate(N_cum = N + lag(N, default = 0) + lag(N, 2, default = 0)) %>% 
   ungroup()
 
 # Step 3: Pick 20 best sellers per month, starting from Jan 2017
@@ -88,7 +90,7 @@ p <- ggplot(prep3, aes(ranking, group = brand_model, fill = brand, color = brand
   scale_x_reverse() +
   scale_fill_viridis_d(option = "magma", begin = 0.2, end = 0.9) +
   labs(title = '{closest_state}',             # placeholder
-       subtitle = "Car registrations in Switzerland since January 2017",
+       subtitle = "Car registrations in Switzerland over the last three months",
        caption = "Source: https://www.auto.swiss/statistiken/pw-zulassungen-nach-marken/") +
   theme_void(base_size = 16) +
   theme(panel.grid.major.x = element_line(size = .1, color = "grey"),
@@ -101,7 +103,7 @@ p <- ggplot(prep3, aes(ranking, group = brand_model, fill = brand, color = brand
 
 
 # Render the animation and save it
-gif <- TRUE 
+gif <- F
 
 if (gif) {
   # gif animation needs "gifski" package (no admin rights required)
